@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phu AI - Quantum Puzzle Solver</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧠 Phu AI</h1>
+            <p class="subtitle">Quantum ZX Core Puzzle & Problem Solver</p>
+            <div class="brand-badges">
+                <span class="badge">Phuoptimizer 81</span>
+                <span class="badge">Phubers Integration</span>
+                <a href="https://youtube.com/@helloPhu" target="_blank" class="badge youtube-badge">
+                    📺 helloPhú YouTube
+                </a>
+            </div>
+        </header>
+
+        <main>
+            <!-- Quantum ZX Core Display -->
+            <section class="quantum-core">
+                <h2>⚛️ Quantum ZX Core Status</h2>
+                <div class="quantum-display">
+                    <canvas id="quantumCanvas"></canvas>
+                    <div class="quantum-stats">
+                        <div class="stat">
+                            <span class="label">Quantum State:</span>
+                            <span id="quantumState" class="value">Superposition</span>
+                        </div>
+                        <div class="stat">
+                            <span class="label">Entanglement:</span>
+                            <span id="entanglement" class="value">81%</span>
+                        </div>
+                        <div class="stat">
+                            <span class="label">Future Prediction:</span>
+                            <span id="prediction" class="value">Calculating...</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Puzzle Solver -->
+            <section class="solver-section">
+                <h2>🧩 Puzzle Solver</h2>
+                <div class="input-group">
+                    <label for="puzzleInput">Enter your puzzle or problem:</label>
+                    <textarea id="puzzleInput" placeholder="Example: What is 2 + 2? or Solve the Fibonacci sequence for n=10"></textarea>
+                </div>
+                <button id="solveBtn" class="btn-primary">🔮 Solve with Phu AI</button>
+                <div id="solutionOutput" class="output-box"></div>
+            </section>
+
+            <!-- Phuoptimizer 81 Control Panel -->
+            <section class="phuoptimizer-section">
+                <h2>⚙️ Phuoptimizer 81 Control</h2>
+                <div class="control-panel">
+                    <div class="control-item">
+                        <label>Optimization Level:</label>
+                        <input type="range" id="optLevel" min="1" max="81" value="81">
+                        <span id="optLevelValue">81</span>
+                    </div>
+                    <div class="control-item">
+                        <label>Quantum Boost:</label>
+                        <input type="checkbox" id="quantumBoost" checked>
+                        <span class="toggle-label">Enabled</span>
+                    </div>
+                    <div class="control-item">
+                        <label>Phubers Protocol:</label>
+                        <select id="phubersProtocol">
+                            <option value="standard">Standard</option>
+                            <option value="advanced">Advanced</option>
+                            <option value="quantum" selected>Quantum</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="optimizerStatus" class="status-box">
+                    Status: Ready
+                </div>
+            </section>
+
+            <!-- AI History Log -->
+            <section class="history-section">
+                <h2>📊 AI Activity Log</h2>
+                <div id="activityLog" class="log-box"></div>
+            </section>
+        </main>
+
+        <footer>
+            <p>Powered by Phu AI &copy; 2026 | Quantum ZX Core Technology</p>
+            <p>Integrated with Phuoptimizer 81 & Phubers</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
