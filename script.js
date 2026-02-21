@@ -1,442 +1,454 @@
-// Phu AI - Quantum ZX Core Implementation
+// Bisswiz Card Game
 
-class PhuAI {
+const SUITS = ['♠', '♥', '♦', '♣'];
+const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+const IS_RED = { '♥': true, '♦': true, '♠': false, '♣': false };
+
+// Points per card rank (Ace=11, 10=10, K=4, Q=3, J=2, others=0)
+const CARD_POINTS = { A: 11, 10: 10, K: 4, Q: 3, J: 2 };
+
+// Numeric rank order for comparisons
+const RANK_ORDER = { 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 8:8, 9:9, 10:10, J:11, Q:12, K:13, A:14 };
+
+const TARGET_SCORE = 500;
+
+class BisswizGame {
     constructor() {
-        this.quantumState = 'Superposition';
-        this.entanglement = 81;
-        this.optimizationLevel = 81;
-        this.phubersProtocol = 'quantum';
-        this.quantumBoost = true;
-        this.activityLog = [];
-        this.init();
+        this.players = [];
+        this.teams = [];          // array of arrays of player indices
+        this.teamScores = [];     // cumulative game scores per team
+        this.roundNumber = 0;
+        this.currentTrick = [];   // [{playerIndex, card}]
+        this.currentPlayer = 0;
+        this.trickLeader = 0;
+        this.bets = [];           // bet amount per player for current round
+        this.betIndex = 0;
+        this.bettingPhase = false;
+        this.playingPhase = false;
+
+        this.setupEventListeners();
+        this.updatePlayerSetup(2);
     }
 
-    init() {
-        this.setupEventListeners();
-        this.startQuantumCore();
-        this.logActivity('Phu AI System Initialized');
-        this.logActivity('Phuoptimizer 81 Online');
-        this.logActivity('Phubers Protocol: Quantum Mode Active');
-        this.logActivity('Quantum ZX Core: Ready');
-    }
+    // ── Setup ────────────────────────────────────────────────────────────────
 
     setupEventListeners() {
-        // Solve button
-        document.getElementById('solveBtn').addEventListener('click', () => this.solvePuzzle());
-        
-        // Enter key in textarea
-        document.getElementById('puzzleInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && e.ctrlKey) {
-                this.solvePuzzle();
-            }
+        document.querySelectorAll('.count-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
+                document.querySelectorAll('.count-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                this.updatePlayerSetup(parseInt(e.target.dataset.count));
+            });
         });
 
-        // Optimization level slider
-        const optLevel = document.getElementById('optLevel');
-        optLevel.addEventListener('input', (e) => {
-            this.optimizationLevel = e.target.value;
-            document.getElementById('optLevelValue').textContent = e.target.value;
-            this.updateOptimizerStatus();
-        });
-
-        // Quantum boost toggle
-        document.getElementById('quantumBoost').addEventListener('change', (e) => {
-            this.quantumBoost = e.target.checked;
-            this.updateOptimizerStatus();
-        });
-
-        // Phubers protocol selector
-        document.getElementById('phubersProtocol').addEventListener('change', (e) => {
-            this.phubersProtocol = e.target.value;
-            this.updateOptimizerStatus();
+        document.getElementById('startGameBtn').addEventListener('click', () => this.startGame());
+        document.getElementById('placeBetBtn').addEventListener('click', () => this.placeBet());
+        document.getElementById('playAgainBtn').addEventListener('click', () => {
+            document.getElementById('winScreen').classList.add('hidden');
+            document.getElementById('setupScreen').classList.remove('hidden');
         });
     }
 
-    startQuantumCore() {
-        this.renderQuantumVisualization();
-        this.updateQuantumStats();
-        
-        // Update quantum state periodically
-        setInterval(() => {
-            this.updateQuantumStats();
-        }, 2000);
-
-        // Animate quantum visualization
-        setInterval(() => {
-            this.renderQuantumVisualization();
-        }, 50);
+    updatePlayerSetup(count) {
+        const container = document.getElementById('playerSetup');
+        container.innerHTML = '';
+        for (let i = 0; i < count; i++) {
+            const isHuman = i === 0;
+            const div = document.createElement('div');
+            div.className = 'player-input-row';
+            div.innerHTML = `
+                <label>Player ${i + 1}${isHuman ? ' (You)' : ' (CPU)'}:</label>
+                <input type="text" id="pName${i}" value="${isHuman ? 'Player 1' : 'CPU ' + i}" class="name-input">
+            `;
+            container.appendChild(div);
+        }
     }
 
-    renderQuantumVisualization() {
-        const canvas = document.getElementById('quantumCanvas');
-        const ctx = canvas.getContext('2d');
-        
-        // Set canvas size
-        canvas.width = canvas.offsetWidth;
-        canvas.height = canvas.offsetHeight;
+    startGame() {
+        const playerCount = parseInt(document.querySelector('.count-btn.active').dataset.count);
+        const startCredits = Math.max(100, parseInt(document.getElementById('startingCredits').value) || 500);
 
-        // Clear canvas
-        ctx.fillStyle = '#000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        this.players = Array.from({ length: playerCount }, (_, i) => ({
+            name: document.getElementById(`pName${i}`).value.trim() || `Player ${i + 1}`,
+            isHuman: i === 0,
+            hand: [],
+            credits: startCredits,
+            pointsWon: 0,
+            tricksWon: 0,
+        }));
 
-        // Draw quantum particles
-        const time = Date.now() / 1000;
-        const particles = 81; // Phuoptimizer 81 themed
-
-        for (let i = 0; i < particles; i++) {
-            const angle = (i / particles) * Math.PI * 2 + time;
-            const radius = 50 + Math.sin(time + i) * 30;
-            const x = canvas.width / 2 + Math.cos(angle) * radius;
-            const y = canvas.height / 2 + Math.sin(angle) * radius;
-            
-            const hue = (i / particles) * 360 + time * 50;
-            ctx.fillStyle = `hsla(${hue}, 100%, 50%, 0.8)`;
-            ctx.beginPath();
-            ctx.arc(x, y, 3, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Draw connections
-            if (i < particles - 1) {
-                const nextAngle = ((i + 1) / particles) * Math.PI * 2 + time;
-                const nextX = canvas.width / 2 + Math.cos(nextAngle) * radius;
-                const nextY = canvas.height / 2 + Math.sin(nextAngle) * radius;
-                
-                ctx.strokeStyle = `hsla(${hue}, 100%, 50%, 0.2)`;
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(x, y);
-                ctx.lineTo(nextX, nextY);
-                ctx.stroke();
-            }
+        // Team assignment
+        if (playerCount === 4) {
+            this.teams = [[0, 2], [1, 3]];
+        } else {
+            // 2 or 3 players: each is their own team
+            this.teams = this.players.map((_, i) => [i]);
         }
 
-        // Draw center core
-        ctx.fillStyle = '#1bffff';
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = '#1bffff';
-        ctx.beginPath();
-        ctx.arc(canvas.width / 2, canvas.height / 2, 10 + Math.sin(time * 2) * 3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowBlur = 0;
+        this.teamScores = this.teams.map(() => 0);
+        this.roundNumber = 0;
+
+        document.getElementById('setupScreen').classList.add('hidden');
+        document.getElementById('gameScreen').classList.remove('hidden');
+
+        this.startRound();
     }
 
-    updateQuantumStats() {
-        // Simulate quantum state changes
-        const states = ['Superposition', 'Entangled', 'Coherent', 'Optimized'];
-        this.quantumState = states[Math.floor(Math.random() * states.length)];
-        document.getElementById('quantumState').textContent = this.quantumState;
+    // ── Deck ─────────────────────────────────────────────────────────────────
 
-        // Update entanglement
-        this.entanglement = 75 + Math.floor(Math.random() * 15);
-        document.getElementById('entanglement').textContent = this.entanglement + '%';
-
-        // Generate future prediction
-        const predictions = [
-            'Positive Outcome',
-            'High Efficiency',
-            'Optimal Solution',
-            'Quantum Advantage',
-            'Peak Performance',
-            'Success Probability: 81%'
-        ];
-        document.getElementById('prediction').textContent = 
-            predictions[Math.floor(Math.random() * predictions.length)];
+    createShuffledDeck() {
+        const deck = [];
+        for (const suit of SUITS) {
+            for (const rank of RANKS) {
+                deck.push({ suit, rank, points: CARD_POINTS[rank] || 0 });
+            }
+        }
+        for (let i = deck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [deck[i], deck[j]] = [deck[j], deck[i]];
+        }
+        return deck;
     }
 
-    solvePuzzle() {
-        const input = document.getElementById('puzzleInput').value.trim();
-        
-        if (!input) {
-            this.showOutput('Please enter a puzzle or problem to solve.', 'error');
+    dealCards() {
+        const deck = this.createShuffledDeck();
+        const n = this.players.length;
+        const perPlayer = Math.floor(52 / n);
+        this.players.forEach((player, i) => {
+            player.hand = deck.slice(i * perPlayer, (i + 1) * perPlayer);
+            // Sort by suit then rank
+            player.hand.sort((a, b) =>
+                SUITS.indexOf(a.suit) !== SUITS.indexOf(b.suit)
+                    ? SUITS.indexOf(a.suit) - SUITS.indexOf(b.suit)
+                    : RANK_ORDER[a.rank] - RANK_ORDER[b.rank]
+            );
+            player.pointsWon = 0;
+            player.tricksWon = 0;
+        });
+    }
+
+    // ── Round lifecycle ───────────────────────────────────────────────────────
+
+    startRound() {
+        this.roundNumber++;
+        document.getElementById('roundBadge').textContent = this.roundNumber;
+        this.currentTrick = [];
+        this.bets = new Array(this.players.length).fill(0);
+
+        this.dealCards();
+        this.updateScoreboard();
+
+        // Betting phase
+        this.bettingPhase = true;
+        this.playingPhase = false;
+        this.betIndex = 0;
+        this.processBetting();
+    }
+
+    processBetting() {
+        if (this.betIndex >= this.players.length) {
+            // All bets placed — start play
+            this.bettingPhase = false;
+            this.playingPhase = true;
+            this.currentTrick = [];
+            this.currentPlayer = this.trickLeader;
+            this.renderGame();
+            this.showMessage(`Round ${this.roundNumber} starts! ${this.players[this.currentPlayer].name} leads.`);
+            if (!this.players[this.currentPlayer].isHuman) {
+                setTimeout(() => this.cpuPlayCard(), 900);
+            }
             return;
         }
 
-        this.logActivity(`Processing: ${input.substring(0, 50)}...`);
-        this.showOutput('🔮 Phu AI is analyzing with Quantum ZX Core...', 'processing');
-
-        // Simulate processing time
-        setTimeout(() => {
-            const solution = this.generateSolution(input);
-            this.showOutput(solution, 'success');
-            this.logActivity('Solution generated successfully');
-        }, 1500);
-    }
-
-    generateSolution(input) {
-        const lowerInput = input.toLowerCase();
-
-        // Math problems
-        if (lowerInput.includes('+') || lowerInput.includes('plus')) {
-            return this.solveMath(input, '+');
-        }
-        if (lowerInput.includes('-') || lowerInput.includes('minus')) {
-            return this.solveMath(input, '-');
-        }
-        if (lowerInput.includes('*') || lowerInput.includes('×') || lowerInput.includes('times')) {
-            return this.solveMath(input, '*');
-        }
-        if (lowerInput.includes('/') || lowerInput.includes('÷') || lowerInput.includes('divided')) {
-            return this.solveMath(input, '/');
-        }
-
-        // Fibonacci
-        if (lowerInput.includes('fibonacci')) {
-            const n = this.extractNumber(input);
-            if (n !== null) {
-                return this.solveFibonacci(n);
-            }
-        }
-
-        // Prime numbers
-        if (lowerInput.includes('prime')) {
-            const n = this.extractNumber(input);
-            if (n !== null) {
-                return this.solvePrime(n);
-            }
-        }
-
-        // Factorial
-        if (lowerInput.includes('factorial')) {
-            const n = this.extractNumber(input);
-            if (n !== null) {
-                return this.solveFactorial(n);
-            }
-        }
-
-        // Pattern recognition
-        if (lowerInput.includes('pattern') || lowerInput.includes('sequence')) {
-            return this.analyzePattern(input);
-        }
-
-        // Future prediction
-        if (lowerInput.includes('future') || lowerInput.includes('predict')) {
-            return this.predictFuture(input);
-        }
-
-        // Default quantum analysis
-        return this.quantumAnalysis(input);
-    }
-
-    solveMath(input, operator) {
-        const numbers = input.match(/-?\d+\.?\d*/g);
-        if (numbers && numbers.length >= 2) {
-            const a = parseFloat(numbers[0]);
-            const b = parseFloat(numbers[1]);
-            let result;
-            
-            switch(operator) {
-                case '+':
-                    result = a + b;
-                    break;
-                case '-':
-                    result = a - b;
-                    break;
-                case '*':
-                    result = a * b;
-                    break;
-                case '/':
-                    if (b === 0) {
-                        return `
-                            <h3>❌ Error</h3>
-                            <p><strong>Cannot divide by zero</strong></p>
-                            <p>Division by zero is undefined in mathematics.</p>
-                            <p><strong>Phu AI Suggestion:</strong> Please check your input values.</p>
-                        `;
-                    }
-                    result = a / b;
-                    break;
-            }
-
-            return `
-                <h3>✅ Solution Found!</h3>
-                <p><strong>Calculation:</strong> ${a} ${operator} ${b} = ${result}</p>
-                <p><strong>Phuoptimizer 81 Analysis:</strong> Optimized at level ${this.optimizationLevel}</p>
-                <p><strong>Quantum Confidence:</strong> ${this.entanglement}%</p>
-                <p><strong>Phubers Protocol:</strong> ${this.phubersProtocol.toUpperCase()} mode active</p>
-            `;
-        }
-        return this.quantumAnalysis(input);
-    }
-
-    solveFibonacci(n) {
-        if (n < 0 || n > 50) {
-            return `<p>Please enter a number between 0 and 50 for Fibonacci calculation.</p>`;
-        }
-
-        const fib = (num) => {
-            if (num <= 1) return num;
-            let a = 0, b = 1;
-            for (let i = 2; i <= num; i++) {
-                [a, b] = [b, a + b];
-            }
-            return b;
-        };
-
-        const result = fib(n);
-        const sequence = [];
-        for (let i = 0; i <= Math.min(n, 10); i++) {
-            sequence.push(fib(i));
-        }
-
-        return `
-            <h3>✅ Fibonacci Solution</h3>
-            <p><strong>Fibonacci(${n}):</strong> ${result}</p>
-            <p><strong>Sequence:</strong> ${sequence.join(', ')}${n > 10 ? '...' : ''}</p>
-            <p><strong>Quantum ZX Core:</strong> Calculated using ${this.phubersProtocol} acceleration</p>
-            <p><strong>Processing Power:</strong> Phuoptimizer 81 at level ${this.optimizationLevel}</p>
-        `;
-    }
-
-    solvePrime(n) {
-        if (n < 2) {
-            return `<p>${n} is not a prime number.</p>`;
-        }
-
-        const isPrime = (num) => {
-            for (let i = 2; i <= Math.sqrt(num); i++) {
-                if (num % i === 0) return false;
-            }
-            return true;
-        };
-
-        const result = isPrime(n);
-        
-        return `
-            <h3>✅ Prime Number Analysis</h3>
-            <p><strong>${n}</strong> is ${result ? '' : 'NOT '}a prime number</p>
-            <p><strong>Quantum Verification:</strong> ${this.quantumBoost ? 'Enhanced' : 'Standard'} mode</p>
-            <p><strong>Phuoptimizer 81:</strong> Analysis complete</p>
-        `;
-    }
-
-    solveFactorial(n) {
-        if (n < 0 || n > 20) {
-            return `<p>Please enter a number between 0 and 20 for factorial calculation.</p>`;
-        }
-
-        let result = 1;
-        for (let i = 2; i <= n; i++) {
-            result *= i;
-        }
-
-        return `
-            <h3>✅ Factorial Solution</h3>
-            <p><strong>${n}!:</strong> ${result.toLocaleString()}</p>
-            <p><strong>Quantum Processing:</strong> ${this.entanglement}% entanglement utilized</p>
-            <p><strong>Phubers Enhancement:</strong> Active</p>
-        `;
-    }
-
-    analyzePattern(input) {
-        return `
-            <h3>✅ Pattern Analysis</h3>
-            <p><strong>Input:</strong> ${input}</p>
-            <p><strong>Quantum ZX Core Analysis:</strong> Pattern detected and analyzed</p>
-            <p><strong>Pattern Type:</strong> Complex sequential structure</p>
-            <p><strong>Optimization:</strong> Phuoptimizer 81 suggests recursive approach</p>
-            <p><strong>Confidence:</strong> ${this.entanglement}%</p>
-        `;
-    }
-
-    predictFuture(input) {
-        const predictions = [
-            'High probability of success in your endeavors',
-            'Quantum fluctuations indicate positive outcomes',
-            'The ZX Core predicts optimal results within 81 time units',
-            'Entanglement patterns suggest favorable circumstances',
-            'Future state: Coherent and optimized',
-            'Timeline convergence shows successful pathway'
-        ];
-        
-        const prediction = predictions[Math.floor(Math.random() * predictions.length)];
-
-        return `
-            <h3>🔮 Future Prediction</h3>
-            <p><strong>Query:</strong> ${input}</p>
-            <p><strong>Quantum ZX Core Prediction:</strong> ${prediction}</p>
-            <p><strong>Confidence Level:</strong> ${this.entanglement}%</p>
-            <p><strong>Time Horizon:</strong> ${Math.floor(Math.random() * 365)} days</p>
-            <p><strong>Phuoptimizer 81 Status:</strong> Calculation verified</p>
-            <p><em>Note: Predictions based on quantum probability analysis</em></p>
-        `;
-    }
-
-    quantumAnalysis(input) {
-        const analyses = [
-            'Your input has been processed through the Quantum ZX Core',
-            'Phu AI has analyzed the problem using quantum entanglement',
-            'The Phuoptimizer 81 suggests a multi-dimensional approach',
-            'Quantum superposition indicates multiple valid solutions',
-            'ZX Core has identified optimal pathways'
-        ];
-
-        const analysis = analyses[Math.floor(Math.random() * analyses.length)];
-
-        return `
-            <h3>🧠 Phu AI Analysis</h3>
-            <p><strong>Input:</strong> ${input}</p>
-            <p><strong>Analysis:</strong> ${analysis}</p>
-            <p><strong>Quantum State:</strong> ${this.quantumState}</p>
-            <p><strong>Entanglement:</strong> ${this.entanglement}%</p>
-            <p><strong>Optimization Level:</strong> ${this.optimizationLevel}/81</p>
-            <p><strong>Phubers Protocol:</strong> ${this.phubersProtocol.toUpperCase()}</p>
-            <p><strong>Recommendation:</strong> Continue with quantum-enhanced approach</p>
-        `;
-    }
-
-    extractNumber(text) {
-        const match = text.match(/\d+/);
-        return match ? parseInt(match[0]) : null;
-    }
-
-    showOutput(content, type) {
-        const output = document.getElementById('solutionOutput');
-        output.innerHTML = content;
-        output.classList.add('visible');
-        
-        if (type === 'error') {
-            output.style.borderLeftColor = '#dc3545';
-        } else if (type === 'success') {
-            output.style.borderLeftColor = '#28a745';
+        const player = this.players[this.betIndex];
+        if (player.isHuman) {
+            const panel = document.getElementById('bettingPanel');
+            const input = document.getElementById('betAmount');
+            document.getElementById('betRoundLabel').textContent = `Bet for Round ${this.roundNumber} (you have ${player.credits} credits):`;
+            input.max = Math.max(0, player.credits);
+            input.value = Math.min(10, player.credits);
+            panel.classList.remove('hidden');
+            this.showMessage(`💰 ${player.name}, place your bet!`);
         } else {
-            output.style.borderLeftColor = '#2e3192';
+            // CPU bets a small random amount (capped at 20% of credits)
+            const maxBet = Math.max(1, Math.floor(player.credits * 0.2));
+            const bet = Math.floor(Math.random() * maxBet) + 1;
+            this.bets[this.betIndex] = Math.min(bet, player.credits);
+            this.betIndex++;
+            this.processBetting();
         }
     }
 
-    updateOptimizerStatus() {
-        const status = document.getElementById('optimizerStatus');
-        status.textContent = `Status: Optimization Level ${this.optimizationLevel} | ` +
-                           `Quantum Boost: ${this.quantumBoost ? 'ON' : 'OFF'} | ` +
-                           `Protocol: ${this.phubersProtocol.toUpperCase()}`;
-        
-        this.logActivity(`Configuration updated: Level ${this.optimizationLevel}, ${this.phubersProtocol} protocol`);
+    placeBet() {
+        const player = this.players[this.betIndex];
+        let bet = parseInt(document.getElementById('betAmount').value) || 0;
+        bet = Math.max(0, Math.min(bet, player.credits));
+        this.bets[this.betIndex] = bet;
+        document.getElementById('bettingPanel').classList.add('hidden');
+        this.betIndex++;
+        this.processBetting();
     }
 
-    logActivity(message) {
-        const timestamp = new Date().toLocaleTimeString();
-        this.activityLog.unshift(`[${timestamp}] ${message}`);
-        
-        // Keep only last 20 entries
-        if (this.activityLog.length > 20) {
-            this.activityLog = this.activityLog.slice(0, 20);
+    // ── Rendering ─────────────────────────────────────────────────────────────
+
+    renderGame() {
+        this.renderPlayerHand();
+        this.renderOpponents();
+        this.renderTrickArea();
+        this.updateScoreboard();
+        this.updatePlayerInfo();
+    }
+
+    renderPlayerHand() {
+        const hand = document.getElementById('playerHand');
+        hand.innerHTML = '';
+        const player = this.players[0];
+        player.hand.forEach((card, index) => {
+            const el = this.makeCardElement(card);
+            const playable = this.playingPhase &&
+                             this.currentPlayer === 0 &&
+                             this.isCardPlayable(card, player.hand);
+            if (playable) {
+                el.classList.add('playable');
+                el.addEventListener('click', () => this.humanPlayCard(index));
+            }
+            hand.appendChild(el);
+        });
+    }
+
+    renderOpponents() {
+        const area = document.getElementById('opponentsArea');
+        area.innerHTML = '';
+        for (let i = 1; i < this.players.length; i++) {
+            const player = this.players[i];
+            const isCurrent = this.playingPhase && this.currentPlayer === i;
+            const div = document.createElement('div');
+            div.className = 'opponent-area';
+            div.innerHTML = `
+                <div class="opponent-name${isCurrent ? ' active' : ''}">
+                    ${player.name}${isCurrent ? ' ▶' : ''}
+                </div>
+                <div class="opponent-hand">
+                    ${player.hand.map(() => '<div class="card card-back">🃏</div>').join('')}
+                </div>
+                <div class="opponent-stats">
+                    💰 ${player.credits} credits &nbsp;|&nbsp; 🃏 ${player.hand.length} cards
+                </div>
+            `;
+            area.appendChild(div);
+        }
+    }
+
+    renderTrickArea() {
+        const area = document.getElementById('trickArea');
+        area.innerHTML = '';
+        this.currentTrick.forEach(({ playerIndex, card }) => {
+            const el = this.makeCardElement(card);
+            el.classList.add('played');
+            const label = document.createElement('span');
+            label.className = 'player-label';
+            label.textContent = this.players[playerIndex].name;
+            el.appendChild(label);
+            area.appendChild(el);
+        });
+
+        const pot = this.bets.reduce((a, b) => a + b, 0);
+        document.getElementById('roundInfo').innerHTML = `
+            <div>Round ${this.roundNumber} &nbsp;|&nbsp; 💰 Pot: ${pot} credits</div>
+            <div>${this.players.map(p => `${p.name}: ${p.tricksWon} tricks`).join(' &nbsp;|&nbsp; ')}</div>
+        `;
+    }
+
+    makeCardElement(card) {
+        const el = document.createElement('div');
+        el.className = `card ${IS_RED[card.suit] ? 'red' : 'black'}`;
+        el.innerHTML = `<span class="c-rank">${card.rank}</span><span class="c-suit">${card.suit}</span>`;
+        return el;
+    }
+
+    updateScoreboard() {
+        const display = document.getElementById('scoreDisplay');
+        display.innerHTML = '';
+        this.teams.forEach((team, i) => {
+            const score = this.teamScores[i];
+            const progress = Math.min(100, (score / TARGET_SCORE) * 100);
+            const div = document.createElement('div');
+            div.className = 'score-row';
+            div.innerHTML = `
+                <div class="team-name">${this.teamName(i)}</div>
+                <div class="score-bar-container"><div class="score-bar" style="width:${progress}%"></div></div>
+                <div class="score-value">${score} / 500</div>
+            `;
+            display.appendChild(div);
+        });
+    }
+
+    updatePlayerInfo() {
+        const p = this.players[0];
+        document.getElementById('playerNameDisplay').textContent = p.name;
+        document.getElementById('playerCreditsDisplay').textContent = `💰 ${p.credits} credits`;
+    }
+
+    // ── Game logic ────────────────────────────────────────────────────────────
+
+    isCardPlayable(card, hand) {
+        if (this.currentTrick.length === 0) return true;
+        const ledSuit = this.currentTrick[0].card.suit;
+        const hasSuit = hand.some(c => c.suit === ledSuit);
+        return hasSuit ? card.suit === ledSuit : true;
+    }
+
+    humanPlayCard(cardIndex) {
+        if (!this.playingPhase || this.currentPlayer !== 0) return;
+        const player = this.players[0];
+        if (!this.isCardPlayable(player.hand[cardIndex], player.hand)) return;
+        this.playCard(0, cardIndex);
+    }
+
+    cpuPlayCard() {
+        if (!this.playingPhase) return;
+        const idx = this.currentPlayer;
+        const player = this.players[idx];
+        const playable = player.hand
+            .map((card, i) => ({ card, i }))
+            .filter(({ card }) => this.isCardPlayable(card, player.hand));
+
+        // Simple AI: follow suit with highest card; otherwise play lowest card
+        playable.sort((a, b) => RANK_ORDER[b.card.rank] - RANK_ORDER[a.card.rank]);
+        this.playCard(idx, playable[0].i);
+    }
+
+    playCard(playerIndex, cardIndex) {
+        const player = this.players[playerIndex];
+        const card = player.hand.splice(cardIndex, 1)[0];
+        this.currentTrick.push({ playerIndex, card });
+        this.renderGame();
+
+        if (this.currentTrick.length === this.players.length) {
+            setTimeout(() => this.resolveTrick(), 1000);
+        } else {
+            this.currentPlayer = (this.currentPlayer + 1) % this.players.length;
+            this.renderGame();
+            if (!this.players[this.currentPlayer].isHuman) {
+                setTimeout(() => this.cpuPlayCard(), 800);
+            }
+        }
+    }
+
+    resolveTrick() {
+        const ledSuit = this.currentTrick[0].card.suit;
+        let winnerSlot = 0;
+        let highest = RANK_ORDER[this.currentTrick[0].card.rank];
+        for (let i = 1; i < this.currentTrick.length; i++) {
+            const { card } = this.currentTrick[i];
+            if (card.suit === ledSuit && RANK_ORDER[card.rank] > highest) {
+                highest = RANK_ORDER[card.rank];
+                winnerSlot = i;
+            }
         }
 
-        this.updateActivityLog();
+        const winnerPlayerIndex = this.currentTrick[winnerSlot].playerIndex;
+        const trickPts = this.currentTrick.reduce((s, { card }) => s + (CARD_POINTS[card.rank] || 0), 0);
+
+        this.players[winnerPlayerIndex].tricksWon++;
+        this.players[winnerPlayerIndex].pointsWon += trickPts;
+
+        this.showMessage(`${this.players[winnerPlayerIndex].name} wins the trick! +${trickPts} pts`);
+
+        this.trickLeader = winnerPlayerIndex;
+        this.currentPlayer = winnerPlayerIndex;
+        this.currentTrick = [];
+
+        if (this.players[0].hand.length === 0) {
+            setTimeout(() => this.endRound(), 1200);
+        } else {
+            setTimeout(() => {
+                this.renderGame();
+                if (!this.players[this.currentPlayer].isHuman) {
+                    setTimeout(() => this.cpuPlayCard(), 800);
+                }
+            }, 1200);
+        }
     }
 
-    updateActivityLog() {
-        const logBox = document.getElementById('activityLog');
-        logBox.innerHTML = this.activityLog
-            .map(entry => `<div class="log-entry">${entry}</div>`)
-            .join('');
+    endRound() {
+        // Add round points to team scores
+        this.teams.forEach((team, i) => {
+            const pts = team.reduce((s, pi) => s + this.players[pi].pointsWon, 0);
+            this.teamScores[i] += pts;
+        });
+
+        // Determine which team won this round (most points)
+        let roundWinner = 0;
+        let maxPts = -1;
+        this.teams.forEach((team, i) => {
+            const pts = team.reduce((s, pi) => s + this.players[pi].pointsWon, 0);
+            if (pts > maxPts) { maxPts = pts; roundWinner = i; }
+        });
+
+        // Credits transfer: winning team collects all bets
+        const pot = this.bets.reduce((a, b) => a + b, 0);
+        this.players.forEach((p, i) => { p.credits -= this.bets[i]; });
+        const share = Math.floor(pot / this.teams[roundWinner].length);
+        this.teams[roundWinner].forEach(pi => { this.players[pi].credits += share; });
+
+        this.updateScoreboard();
+
+        const summary = this.teams
+            .map((team, i) => {
+                const pts = team.reduce((s, pi) => s + this.players[pi].pointsWon, 0);
+                return `${this.teamName(i)}: ${pts} pts`;
+            })
+            .join(' | ');
+        this.showMessage(`Round ${this.roundNumber} over! ${summary}`);
+
+        // Check win condition
+        const winner = this.teamScores.findIndex(s => s >= TARGET_SCORE);
+        if (winner !== -1) {
+            setTimeout(() => this.endGame(winner), 1500);
+        } else {
+            setTimeout(() => this.startRound(), 2500);
+        }
+    }
+
+    endGame(winnerTeamIdx) {
+        document.getElementById('gameScreen').classList.add('hidden');
+        const winScreen = document.getElementById('winScreen');
+
+        document.getElementById('winMessage').innerHTML = `
+            <h1>🎉 Game Over!</h1>
+            <h2>${this.teamName(winnerTeamIdx)} Wins!</h2>
+            <p>Reached ${this.teamScores[winnerTeamIdx]} points — first to ${TARGET_SCORE}!</p>
+        `;
+
+        document.getElementById('finalScores').innerHTML = `
+            <h3>Final Scores</h3>
+            ${this.teamScores.map((score, i) => `
+                <div class="final-score-row">
+                    <span>${this.teamName(i)}</span>
+                    <span>${score} pts</span>
+                    <span>💰 ${this.teams[i].map(pi => this.players[pi].credits).join(' / ')} credits</span>
+                </div>
+            `).join('')}
+        `;
+
+        winScreen.classList.remove('hidden');
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
+    teamName(teamIndex) {
+        return this.teams[teamIndex].map(i => this.players[i].name).join(' & ');
+    }
+
+    showMessage(msg) {
+        const el = document.getElementById('gameMessage');
+        el.textContent = msg;
+        el.classList.add('show');
+        clearTimeout(this._msgTimer);
+        this._msgTimer = setTimeout(() => el.classList.remove('show'), 3000);
     }
 }
 
-// Initialize Phu AI when page loads
-window.addEventListener('DOMContentLoaded', () => {
-    const phuAI = new PhuAI();
-    
-    console.log('🧠 Phu AI initialized successfully!');
-    console.log('Phuoptimizer 81 & Phubers integration active');
-    console.log('Quantum ZX Core online');
-});
+window.addEventListener('DOMContentLoaded', () => { new BisswizGame(); });
+

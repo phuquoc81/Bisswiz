@@ -3,96 +3,90 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phu AI - Quantum Puzzle Solver</title>
+    <title>Bisswiz - Card Game</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>🧠 Phu AI</h1>
-            <p class="subtitle">Quantum ZX Core Puzzle & Problem Solver</p>
-            <div class="brand-badges">
-                <span class="badge">Phuoptimizer 81</span>
-                <span class="badge">Phubers Integration</span>
-                <a href="https://youtube.com/@helloPhu" target="_blank" class="badge youtube-badge">
-                    📺 helloPhú YouTube
-                </a>
+
+    <!-- Setup Screen -->
+    <div id="setupScreen" class="screen">
+        <div class="setup-container">
+            <h1>🃏 Bisswiz</h1>
+            <p class="tagline">Card Game · 2–4 Players · First Team to 500 Points Wins!</p>
+
+            <div class="setup-section">
+                <label>Number of Players:</label>
+                <div class="player-count-btns">
+                    <button class="count-btn active" data-count="2">2 Players</button>
+                    <button class="count-btn" data-count="3">3 Players</button>
+                    <button class="count-btn" data-count="4">4 Players</button>
+                </div>
             </div>
-        </header>
 
-        <main>
-            <!-- Quantum ZX Core Display -->
-            <section class="quantum-core">
-                <h2>⚛️ Quantum ZX Core Status</h2>
-                <div class="quantum-display">
-                    <canvas id="quantumCanvas"></canvas>
-                    <div class="quantum-stats">
-                        <div class="stat">
-                            <span class="label">Quantum State:</span>
-                            <span id="quantumState" class="value">Superposition</span>
-                        </div>
-                        <div class="stat">
-                            <span class="label">Entanglement:</span>
-                            <span id="entanglement" class="value">81%</span>
-                        </div>
-                        <div class="stat">
-                            <span class="label">Future Prediction:</span>
-                            <span id="prediction" class="value">Calculating...</span>
-                        </div>
-                    </div>
+            <div id="playerSetup" class="setup-section"></div>
+
+            <div class="setup-section">
+                <label>Starting Credits:</label>
+                <input type="number" id="startingCredits" value="500" min="100" max="9999" class="credits-input">
+            </div>
+
+            <button id="startGameBtn" class="btn-primary">🎮 Start Game</button>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="gameScreen" class="screen hidden">
+        <div class="game-layout">
+
+            <!-- Scoreboard sidebar -->
+            <aside class="scoreboard">
+                <h2>🏆 Scores</h2>
+                <div id="scoreDisplay"></div>
+                <div class="target-info">First to <strong>500 pts</strong> wins!</div>
+                <div class="round-badge">Round <span id="roundBadge">1</span></div>
+            </aside>
+
+            <!-- Main table -->
+            <div class="game-table">
+                <div id="opponentsArea" class="opponents-area"></div>
+
+                <div class="center-area">
+                    <div id="trickArea" class="trick-area"></div>
+                    <div id="roundInfo" class="round-info"></div>
                 </div>
-            </section>
 
-            <!-- Puzzle Solver -->
-            <section class="solver-section">
-                <h2>🧩 Puzzle Solver</h2>
-                <div class="input-group">
-                    <label for="puzzleInput">Enter your puzzle or problem:</label>
-                    <textarea id="puzzleInput" placeholder="Example: What is 2 + 2? or Solve the Fibonacci sequence for n=10"></textarea>
-                </div>
-                <button id="solveBtn" class="btn-primary">🔮 Solve with Phu AI</button>
-                <div id="solutionOutput" class="output-box"></div>
-            </section>
-
-            <!-- Phuoptimizer 81 Control Panel -->
-            <section class="phuoptimizer-section">
-                <h2>⚙️ Phuoptimizer 81 Control</h2>
-                <div class="control-panel">
-                    <div class="control-item">
-                        <label>Optimization Level:</label>
-                        <input type="range" id="optLevel" min="1" max="81" value="81">
-                        <span id="optLevelValue">81</span>
+                <div class="player-area">
+                    <div class="player-info">
+                        <span id="playerNameDisplay" class="player-name"></span>
+                        <span id="playerCreditsDisplay" class="player-credits"></span>
                     </div>
-                    <div class="control-item">
-                        <label>Quantum Boost:</label>
-                        <input type="checkbox" id="quantumBoost" checked>
-                        <span class="toggle-label">Enabled</span>
-                    </div>
-                    <div class="control-item">
-                        <label>Phubers Protocol:</label>
-                        <select id="phubersProtocol">
-                            <option value="standard">Standard</option>
-                            <option value="advanced">Advanced</option>
-                            <option value="quantum" selected>Quantum</option>
-                        </select>
-                    </div>
+                    <div id="playerHand" class="card-hand"></div>
                 </div>
-                <div id="optimizerStatus" class="status-box">
-                    Status: Ready
-                </div>
-            </section>
+            </div>
 
-            <!-- AI History Log -->
-            <section class="history-section">
-                <h2>📊 AI Activity Log</h2>
-                <div id="activityLog" class="log-box"></div>
-            </section>
-        </main>
+        </div>
 
-        <footer>
-            <p>Powered by Phu AI &copy; 2026 | Quantum ZX Core Technology</p>
-            <p>Integrated with Phuoptimizer 81 & Phubers</p>
-        </footer>
+        <!-- Betting Panel (modal) -->
+        <div id="bettingPanel" class="modal-overlay hidden">
+            <div class="modal-box">
+                <h3>💰 Place Your Bet</h3>
+                <p id="betRoundLabel">Bet for Round 1:</p>
+                <input type="number" id="betAmount" value="10" min="0" class="bet-input">
+                <button id="placeBetBtn" class="btn-primary">Confirm Bet</button>
+            </div>
+        </div>
+
+        <!-- Game message toast -->
+        <div id="gameMessage" class="game-message"></div>
+    </div>
+
+    <!-- Win Screen -->
+    <div id="winScreen" class="screen hidden">
+        <div class="win-container">
+            <div id="winMessage"></div>
+            <div id="finalScores"></div>
+            <button id="playAgainBtn" class="btn-primary">🔄 Play Again</button>
+        </div>
     </div>
 
     <script src="script.js"></script>
