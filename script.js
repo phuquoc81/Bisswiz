@@ -170,9 +170,9 @@ class BisswizGame {
             panel.classList.remove('hidden');
             this.showMessage(`💰 ${player.name}, place your bet!`);
         } else {
-            // CPU bets a small random amount (capped at 20% of credits)
-            const maxBet = Math.max(1, Math.floor(player.credits * 0.2));
-            const bet = Math.floor(Math.random() * maxBet) + 1;
+            // CPU bets a small random amount (capped at 20% of credits, 0 if broke)
+            const maxBet = Math.floor(player.credits * 0.2);
+            const bet = player.credits > 0 ? Math.floor(Math.random() * maxBet) + 1 : 0;
             this.bets[this.betIndex] = Math.min(bet, player.credits);
             this.betIndex++;
             this.processBetting();
@@ -313,7 +313,7 @@ class BisswizGame {
             .map((card, i) => ({ card, i }))
             .filter(({ card }) => this.isCardPlayable(card, player.hand));
 
-        // Simple AI: follow suit with highest card; otherwise play lowest card
+        // Simple AI: always play the highest available playable card
         playable.sort((a, b) => RANK_ORDER[b.card.rank] - RANK_ORDER[a.card.rank]);
         this.playCard(idx, playable[0].i);
     }
@@ -386,11 +386,13 @@ class BisswizGame {
             if (pts > maxPts) { maxPts = pts; roundWinner = i; }
         });
 
-        // Credits transfer: winning team collects all bets
+        // Credits transfer: winning team collects all bets (remainder goes to first winner)
         const pot = this.bets.reduce((a, b) => a + b, 0);
         this.players.forEach((p, i) => { p.credits -= this.bets[i]; });
-        const share = Math.floor(pot / this.teams[roundWinner].length);
-        this.teams[roundWinner].forEach(pi => { this.players[pi].credits += share; });
+        const winTeam = this.teams[roundWinner];
+        const baseShare = Math.floor(pot / winTeam.length);
+        const remainder = pot - baseShare * winTeam.length;
+        winTeam.forEach((pi, j) => { this.players[pi].credits += baseShare + (j === 0 ? remainder : 0); });
 
         this.updateScoreboard();
 
