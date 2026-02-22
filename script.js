@@ -417,10 +417,13 @@ class BisswizGame {
         document.getElementById('gameScreen').classList.add('hidden');
         const winScreen = document.getElementById('winScreen');
 
+        const winnerName = this.teamName(winnerTeamIdx);
+        const winnerScore = this.teamScores[winnerTeamIdx];
+
         document.getElementById('winMessage').innerHTML = `
             <h1>🎉 Game Over!</h1>
-            <h2>${this.teamName(winnerTeamIdx)} Wins!</h2>
-            <p>Reached ${this.teamScores[winnerTeamIdx]} points — first to ${TARGET_SCORE}!</p>
+            <h2>${winnerName} Wins!</h2>
+            <p>Reached ${winnerScore} points — first to ${TARGET_SCORE}!</p>
         `;
 
         document.getElementById('finalScores').innerHTML = `
@@ -433,6 +436,51 @@ class BisswizGame {
                 </div>
             `).join('')}
         `;
+
+        // Wire up share buttons
+        const shareText = `🃏 I just played Bisswiz! ${winnerName} won with ${winnerScore} points. Play the card game here:`;
+        const shareUrl = window.location.href;
+
+        document.getElementById('shareTwitterBtn').onclick = () => {
+            const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+            window.open(url, '_blank', 'noopener,noreferrer');
+        };
+
+        document.getElementById('shareFacebookBtn').onclick = () => {
+            const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`;
+            window.open(url, '_blank', 'noopener,noreferrer');
+        };
+
+        document.getElementById('shareCopyBtn').onclick = () => {
+            const copyBtn = document.getElementById('shareCopyBtn');
+            const fullText = `${shareText} ${shareUrl}`;
+            const onSuccess = () => {
+                copyBtn.textContent = '✅ Copied!';
+                setTimeout(() => { copyBtn.textContent = '🔗 Copy Link'; }, 2000);
+            };
+            const onError = () => {
+                copyBtn.textContent = '⚠️ Copy failed';
+                setTimeout(() => { copyBtn.textContent = '🔗 Copy Link'; }, 2000);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(fullText).then(onSuccess).catch(onError);
+            } else {
+                // Fallback for older browsers
+                try {
+                    const ta = document.createElement('textarea');
+                    ta.value = fullText;
+                    ta.style.position = 'fixed';
+                    ta.style.opacity = '0';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    const ok = document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    ok ? onSuccess() : onError();
+                } catch (_) {
+                    onError();
+                }
+            }
+        };
 
         winScreen.classList.remove('hidden');
     }
