@@ -4,6 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bisswiz - Card Game</title>
+
+    <!-- Social media / Open Graph meta tags -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Bisswiz – Card Game">
+    <meta property="og:description" content="Play Bisswiz, the fast-paced trick-taking card game for 2–4 players. First team to 500 points wins!">
+    <meta property="og:url" content="https://phuquoc81.github.io/Bisswiz/">
+    <meta property="og:image" content="https://phuquoc81.github.io/Bisswiz/preview.png">
+
+    <!-- Twitter Card meta tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Bisswiz – Card Game">
+    <meta name="twitter:description" content="Play Bisswiz, the fast-paced trick-taking card game for 2–4 players. First team to 500 points wins!">
+    <meta name="twitter:image" content="https://phuquoc81.github.io/Bisswiz/preview.png">
+
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -85,6 +99,14 @@
         <div class="win-container">
             <div id="winMessage"></div>
             <div id="finalScores"></div>
+            <div class="share-section">
+                <p class="share-label">Share your victory!</p>
+                <div class="share-buttons">
+                    <button id="shareTwitterBtn" class="btn-share btn-twitter">𝕏 Share on X</button>
+                    <button id="shareFacebookBtn" class="btn-share btn-facebook">📘 Share on Facebook</button>
+                    <button id="shareCopyBtn" class="btn-share btn-copy">🔗 Copy Link</button>
+                </div>
+            </div>
             <button id="playAgainBtn" class="btn-primary">🔄 Play Again</button>
         </div>
     </div>
