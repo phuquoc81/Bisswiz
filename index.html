@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bisswiz - Card Game</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- Stripe.js – loaded asynchronously; no card data ever touches this server -->
+    <script src="https://js.stripe.com/v3/" async></script>
 </head>
 <body>
 
@@ -58,6 +60,7 @@
                 <div id="scoreDisplay"></div>
                 <div class="target-info">First to <strong>500 pts</strong> wins!</div>
                 <div class="round-badge">Round <span id="roundBadge">1</span></div>
+                <button id="buyCreditsBtn" class="btn-buy-credits">💳 Buy Credits</button>
             </aside>
 
             <!-- Main table -->
@@ -100,6 +103,87 @@
             <div id="winMessage"></div>
             <div id="finalScores"></div>
             <button id="playAgainBtn" class="btn-primary">🔄 Play Again</button>
+        </div>
+    </div>
+
+    <!-- Payment Modal -->
+    <div id="paymentModal" class="modal-overlay hidden">
+        <div class="modal-box payment-modal-box">
+            <button id="closePaymentBtn" class="payment-close-btn" aria-label="Close">✕</button>
+            <h3>💳 Buy Credits</h3>
+            <p class="payment-subtitle">Top up your in-game credits instantly.</p>
+
+            <!-- Credit package selection -->
+            <div class="package-grid">
+                <button class="pkg-btn active" data-credits="100" data-price="1.00">
+                    <span class="pkg-credits">100</span>
+                    <span class="pkg-label">Credits</span>
+                    <span class="pkg-price">$1.00</span>
+                </button>
+                <button class="pkg-btn" data-credits="500" data-price="4.00">
+                    <span class="pkg-credits">500</span>
+                    <span class="pkg-label">Credits</span>
+                    <span class="pkg-price">$4.00</span>
+                </button>
+                <button class="pkg-btn" data-credits="1000" data-price="7.00">
+                    <span class="pkg-credits">1,000</span>
+                    <span class="pkg-label">Credits</span>
+                    <span class="pkg-price">$7.00</span>
+                </button>
+            </div>
+
+            <!-- Payment method tabs -->
+            <div class="pay-tabs">
+                <button class="pay-tab active" data-tab="stripe">💳 Card (Stripe)</button>
+                <button class="pay-tab" data-tab="etransfer">🏦 Interac e‑Transfer</button>
+            </div>
+
+            <!-- Stripe tab -->
+            <div id="tabStripe" class="pay-tab-content">
+                <div id="stripe-card-element" class="stripe-card-element"></div>
+                <div id="stripe-card-errors" class="stripe-errors" role="alert"></div>
+                <button id="stripePayBtn" class="btn-primary pay-submit-btn">
+                    Pay <span id="stripePayAmount">$1.00</span>
+                </button>
+                <p class="payment-notice">
+                    🔒 Payments processed securely by <strong>Stripe</strong>. Card details never touch this server.
+                </p>
+            </div>
+
+            <!-- TD Bank Interac e‑Transfer tab -->
+            <div id="tabEtransfer" class="pay-tab-content hidden">
+                <div class="etransfer-info">
+                    <p class="etransfer-step">Send your Interac e‑Transfer to:</p>
+                    <div class="etransfer-detail">
+                        <span class="etransfer-label">Email</span>
+                        <span class="etransfer-value" id="etransferEmail">payments@bisswiz.example.com</span>
+                    </div>
+                    <div class="etransfer-detail">
+                        <span class="etransfer-label">Amount</span>
+                        <span class="etransfer-value" id="etransferAmount">$1.00 CAD</span>
+                    </div>
+                    <div class="etransfer-detail">
+                        <span class="etransfer-label">Message / Ref</span>
+                        <span class="etransfer-value" id="etransferRef">BISSWIZ-100</span>
+                    </div>
+                    <ol class="etransfer-steps">
+                        <li>Log in to <strong>TD Online Banking</strong> or the TD app.</li>
+                        <li>Go to <em>Send Money → Interac e‑Transfer</em>.</li>
+                        <li>Enter the email and amount shown above.</li>
+                        <li>Include the reference code in the message field.</li>
+                        <li>Click <strong>"I've sent the transfer"</strong> below — credits are added instantly for demo purposes.</li>
+                    </ol>
+                </div>
+                <button id="etransferConfirmBtn" class="btn-primary pay-submit-btn">
+                    ✅ I've sent the transfer — add <span id="etransferCreditLabel">100</span> credits
+                </button>
+                <p class="payment-notice">
+                    🏦 TD Bank Interac e‑Transfer. Credits added automatically once your transfer is confirmed.
+                </p>
+            </div>
+
+            <!-- Success / error messages -->
+            <div id="paymentStatus" class="payment-status hidden"></div>
         </div>
     </div>
 

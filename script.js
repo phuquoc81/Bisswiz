@@ -26,8 +26,15 @@ class BisswizGame {
         this.bettingPhase = false;
         this.playingPhase = false;
 
+        // Payment state
+        this._stripe = null;
+        this._stripeCardElement = null;
+        this._selectedCredits = 100;
+        this._selectedPrice = '1.00';
+
         this.setupEventListeners();
         this.updatePlayerSetup(2);
+        this._initStripe();
     }
 
     // ── Setup ────────────────────────────────────────────────────────────────
@@ -52,6 +59,42 @@ class BisswizGame {
             document.getElementById('winScreen').classList.add('hidden');
             document.getElementById('loginScreen').classList.remove('hidden');
         });
+
+        // Payment modal
+        document.getElementById('buyCreditsBtn').addEventListener('click', () => this.openPaymentModal());
+        document.getElementById('closePaymentBtn').addEventListener('click', () => this.closePaymentModal());
+        document.getElementById('paymentModal').addEventListener('click', e => {
+            if (e.target === document.getElementById('paymentModal')) this.closePaymentModal();
+        });
+
+        // Package selection
+        document.querySelectorAll('.pkg-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
+                document.querySelectorAll('.pkg-btn').forEach(b => b.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+                this.updateSelectedPackage(
+                    parseInt(e.currentTarget.dataset.credits),
+                    e.currentTarget.dataset.price
+                );
+            });
+        });
+
+        // Payment tabs
+        document.querySelectorAll('.pay-tab').forEach(tab => {
+            tab.addEventListener('click', e => {
+                document.querySelectorAll('.pay-tab').forEach(t => t.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+                const target = e.currentTarget.dataset.tab;
+                document.getElementById('tabStripe').classList.toggle('hidden', target !== 'stripe');
+                document.getElementById('tabEtransfer').classList.toggle('hidden', target !== 'etransfer');
+            });
+        });
+
+        // Stripe pay button
+        document.getElementById('stripePayBtn').addEventListener('click', () => this.handleStripePayment());
+
+        // e-Transfer confirm button
+        document.getElementById('etransferConfirmBtn').addEventListener('click', () => this.handleETransferConfirm());
     }
 
     handleLogin() {
@@ -477,6 +520,205 @@ class BisswizGame {
         el.classList.add('show');
         clearTimeout(this._msgTimer);
         this._msgTimer = setTimeout(() => el.classList.remove('show'), 3000);
+    }
+
+    // ── Payment ───────────────────────────────────────────────────────────────
+
+    /**
+     * Initialises Stripe.js.
+     * Replace BISSWIZ_STRIPE_PUBLISHABLE_KEY with your real publishable key
+     * (starts with pk_live_ for production or pk_test_ for testing).
+     */
+    _initStripe() {
+        // Stripe.js is loaded asynchronously; wait until it is ready.
+        let stripeRetries = 0;
+        const MAX_STRIPE_RETRIES = 30; // ~9 seconds total
+        const tryInit = () => {
+            if (typeof Stripe === 'undefined') {
+                if (++stripeRetries >= MAX_STRIPE_RETRIES) {
+                    console.warn('Bisswiz: Stripe.js did not load — card payments unavailable.');
+                    return;
+                }
+                setTimeout(tryInit, 300);
+                return;
+            }
+            // Set window.BISSWIZ_STRIPE_PUBLISHABLE_KEY before loading this page.
+            // Example: <script>window.BISSWIZ_STRIPE_PUBLISHABLE_KEY = 'pk_live_...';</script>
+            const pubKey = window.BISSWIZ_STRIPE_PUBLISHABLE_KEY;
+            if (!pubKey) {
+                console.warn('Bisswiz: window.BISSWIZ_STRIPE_PUBLISHABLE_KEY is not set — card payments disabled.');
+                return;
+            }
+            this._stripe = Stripe(pubKey);
+            const elements = this._stripe.elements({
+                appearance: {
+                    theme: 'night',
+                    variables: {
+                        colorPrimary: '#ffd700',
+                        colorBackground: '#1b3a2a',
+                        colorText: '#ffffff',
+                        colorDanger: '#ff6b6b',
+                        borderRadius: '8px',
+                    },
+                },
+            });
+            this._stripeCardElement = elements.create('card', {
+                style: {
+                    base: {
+                        color: '#ffffff',
+                        fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif',
+                        fontSize: '16px',
+                        '::placeholder': { color: '#aaa' },
+                    },
+                    invalid: { color: '#ff6b6b' },
+                },
+            });
+            this._stripeCardElement.mount('#stripe-card-element');
+            this._stripeCardElement.on('change', e => {
+                const errEl = document.getElementById('stripe-card-errors');
+                errEl.textContent = e.error ? e.error.message : '';
+            });
+        };
+        tryInit();
+    }
+
+    openPaymentModal() {
+        this._selectedCredits = 100;
+        this._selectedPrice = '1.00';
+        // Reset to first package and Stripe tab
+        document.querySelectorAll('.pkg-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
+        document.querySelectorAll('.pay-tab').forEach((t, i) => t.classList.toggle('active', i === 0));
+        document.getElementById('tabStripe').classList.remove('hidden');
+        document.getElementById('tabEtransfer').classList.add('hidden');
+        this._updatePaymentUI();
+        document.getElementById('paymentStatus').classList.add('hidden');
+        document.getElementById('paymentModal').classList.remove('hidden');
+    }
+
+    closePaymentModal() {
+        document.getElementById('paymentModal').classList.add('hidden');
+        document.getElementById('paymentStatus').classList.add('hidden');
+        if (this._stripeCardElement) this._stripeCardElement.clear();
+        document.getElementById('stripe-card-errors').textContent = '';
+    }
+
+    updateSelectedPackage(credits, price) {
+        this._selectedCredits = credits;
+        this._selectedPrice = price;
+        this._updatePaymentUI();
+        document.getElementById('paymentStatus').classList.add('hidden');
+    }
+
+    _updatePaymentUI() {
+        const credits = this._selectedCredits;
+        const price = this._selectedPrice;
+        document.getElementById('stripePayAmount').textContent = `$${price}`;
+        document.getElementById('etransferAmount').textContent = `$${price} CAD`;
+        document.getElementById('etransferRef').textContent = `BISSWIZ-${credits}`;
+        document.getElementById('etransferCreditLabel').textContent = credits.toLocaleString();
+    }
+
+    _showPaymentStatus(ok, msg) {
+        const el = document.getElementById('paymentStatus');
+        el.textContent = msg;
+        el.className = `payment-status ${ok ? 'payment-success' : 'payment-error'}`;
+        el.classList.remove('hidden');
+    }
+
+    /**
+     * Handles Stripe card payment.
+     *
+     * In a production deployment this must be paired with a server-side endpoint
+     * that creates a PaymentIntent and returns its client_secret.  The flow would
+     * be:
+     *   1. Call your server: POST /create-payment-intent  → { clientSecret }
+     *   2. stripe.confirmCardPayment(clientSecret, { payment_method: { card } })
+     *
+     * For this demo the charge is simulated client-side so players can try the
+     * feature immediately without a backend.
+     */
+    async handleStripePayment() {
+        if (!this._stripe || !this._stripeCardElement) {
+            this._showPaymentStatus(false,
+                '⚠️ Card payments are not available. Ensure window.BISSWIZ_STRIPE_PUBLISHABLE_KEY is set and Stripe.js loaded.');
+            return;
+        }
+
+        const btn = document.getElementById('stripePayBtn');
+        btn.disabled = true;
+        btn.textContent = '⏳ Processing…';
+        document.getElementById('paymentStatus').classList.add('hidden');
+
+        try {
+            // Create a payment method to validate the card details via Stripe.
+            const { paymentMethod, error } = await this._stripe.createPaymentMethod({
+                type: 'card',
+                card: this._stripeCardElement,
+            });
+
+            if (error) {
+                document.getElementById('stripe-card-errors').textContent = error.message;
+                this._showPaymentStatus(false, `❌ ${error.message}`);
+                return;
+            }
+
+            /*
+             * ── Production step (requires server) ──────────────────────────
+             * const res  = await fetch('/api/create-payment-intent', {
+             *     method: 'POST',
+             *     headers: { 'Content-Type': 'application/json' },
+             *     body: JSON.stringify({ paymentMethodId: paymentMethod.id,
+             *                           amount: Math.round(parseFloat(this._selectedPrice) * 100),
+             *                           currency: 'usd' }),
+             * });
+             * const { clientSecret } = await res.json();
+             * const result = await this._stripe.confirmCardPayment(clientSecret,
+             *     { payment_method: paymentMethod.id });
+             * if (result.error) throw new Error(result.error.message);
+             * ─────────────────────────────────────────────────────────────── */
+
+            // ⚠️  DEMO ONLY — credits are awarded after client-side card validation.
+            // Production: uncomment the server block above; only call _addCreditsToPlayer
+            // after your server confirms the PaymentIntent succeeded.
+            this._addCreditsToPlayer(this._selectedCredits);
+            this._stripeCardElement.clear();
+            this._showPaymentStatus(true,
+                `✅ Payment of $${this._selectedPrice} accepted! +${this._selectedCredits.toLocaleString()} credits added.`);
+            this.showMessage(`💳 +${this._selectedCredits} credits added via Stripe!`);
+        } catch (err) {
+            this._showPaymentStatus(false, `❌ Payment failed: ${err.message}`);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = `Pay <span id="stripePayAmount">$${this._selectedPrice}</span>`;
+        }
+    }
+
+    /**
+     * Handles the TD Bank Interac e-Transfer confirmation.
+     *
+     * ⚠️  DEMO ONLY — credits are awarded immediately on user confirmation.
+     * Production: verify the transfer via a TD Bank webhook or server-side
+     * polling before calling _addCreditsToPlayer().
+     */
+    handleETransferConfirm() {
+        const btn = document.getElementById('etransferConfirmBtn');
+        btn.disabled = true;
+
+        // Simulate a brief verification delay.
+        setTimeout(() => {
+            this._addCreditsToPlayer(this._selectedCredits);
+            this._showPaymentStatus(true,
+                `✅ e-Transfer confirmed! +${this._selectedCredits.toLocaleString()} credits added. Thank you!`);
+            this.showMessage(`🏦 +${this._selectedCredits} credits added via e-Transfer!`);
+            btn.disabled = false;
+        }, 1200);
+    }
+
+    _addCreditsToPlayer(amount) {
+        if (this.players.length > 0) {
+            this.players[0].credits += amount;
+            this.updatePlayerInfo();
+        }
     }
 }
 
