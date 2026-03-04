@@ -12,6 +12,11 @@ const RANK_ORDER = { 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 8:8, 9:9, 10:10, J:11, Q:12, 
 
 const TARGET_SCORE = 500;
 
+// ── Constants ─────────────────────────────────────────────────────────────────
+const GAME_URL = typeof window !== 'undefined'
+    ? window.location.href
+    : 'https://phuquoc81.github.io/Bisswiz/';
+
 // ── Phutimizer 81 ─────────────────────────────────────────────────────────────
 // Converts a 1-81 slider level into gameplay modifiers.
 // level=1  → easy (CPU plays weakly, delays are slow)
@@ -42,6 +47,7 @@ const PHUSI_TIPS = [
 
 function phusiHint(context) {
     const pool = PHUSI_TIPS.filter(t => t.trigger === 'general' || t.trigger === context);
+    if (pool.length === 0) return 'Play your best card and enjoy the game!';
     return pool[Math.floor(Math.random() * pool.length)].text;
 }
 
@@ -250,7 +256,10 @@ class BisswizGame {
             panel.classList.remove('hidden');
             this.showMessage(`💰 ${player.name}, place your bet!`);
         } else {
-            // CPU bets: smartness scales bet aggressiveness with Phutimizer level
+            // CPU bets: smartness scales bet aggressiveness with Phutimizer level.
+            // At level 1 (smartness=0): max 5% of credits (conservative/easy).
+            // At level 81 (smartness=1): max 30% of credits (aggressive/hard).
+            // This range keeps easy-mode CPUs cheap to beat and hard-mode CPUs costly.
             const smartness = phutConfig(this.phutLevel).cpuSmartness;
             const maxFrac = 0.05 + smartness * 0.25; // 5%–30% of credits
             const maxBet = Math.floor(player.credits * maxFrac);
@@ -556,10 +565,12 @@ class BisswizGame {
             else if (myScore < maxOther - 50) context = 'losing';
         }
 
-        const tips = [];
-        for (let i = 0; i < 3; i++) tips.push(phusiHint(context));
+        // Collect up to 3 unique tips
+        const pool = PHUSI_TIPS.filter(t => t.trigger === 'general' || t.trigger === context);
+        const shuffled = pool.slice().sort(() => Math.random() - 0.5);
+        const tips = shuffled.slice(0, Math.min(3, shuffled.length));
 
-        content.innerHTML = tips.map(t => `<p class="phusi-tip-item">💡 ${t}</p>`).join('');
+        content.innerHTML = tips.map(t => `<p class="phusi-tip-item">💡 ${t.text}</p>`).join('');
         panel.classList.remove('hidden');
     }
 
@@ -575,7 +586,7 @@ class BisswizGame {
         const text = score
             ? `🃏 I just played Bisswiz – ${winnerName} won with ${score}! Play the Phu card game now!`
             : `🃏 Play Bisswiz – the Phu card game! Bet, win tricks, race to 500 pts!`;
-        const url = 'https://phuquoc81.github.io/Bisswiz/';
+        const url = GAME_URL;
         const encoded = encodeURIComponent(text);
         const encodedUrl = encodeURIComponent(url);
 

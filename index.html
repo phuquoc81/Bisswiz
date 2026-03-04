@@ -181,7 +181,10 @@
     <script>
         // Register service worker for offline / all-platform support
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('./sw.js').catch(() => {});
+            navigator.serviceWorker.register('./sw.js').catch(err => {
+                // Log to console for debugging; does not break gameplay
+                console.warn('Service worker registration failed:', err);
+            });
         }
     </script>
 </body>

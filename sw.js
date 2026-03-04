@@ -26,6 +26,14 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
     e.respondWith(
-        caches.match(e.request).then(cached => cached || fetch(e.request))
+        caches.match(e.request).then(cached => {
+            if (cached) return cached;
+            return fetch(e.request).catch(() => {
+                // Offline fallback: return cached index.html for navigation requests
+                if (e.request.mode === 'navigate') {
+                    return caches.match('./index.html');
+                }
+            });
+        })
     );
 });
