@@ -8,8 +8,22 @@
 </head>
 <body>
 
+    <!-- Login Screen -->
+    <div id="loginScreen" class="screen">
+        <div class="login-container">
+            <h1>🃏 Bisswiz</h1>
+            <p class="tagline">Card Game · 2–4 Players · First Team to 500 Points Wins!</p>
+            <div class="login-section">
+                <label for="loginName">Your Name:</label>
+                <input type="text" id="loginName" placeholder="Enter your name" class="name-input" maxlength="30">
+                <p id="loginError" class="login-error hidden">Please enter your name to continue.</p>
+            </div>
+            <button id="playGameBtn" class="btn-primary btn-play">▶ Play Game</button>
+        </div>
+    </div>
+
     <!-- Setup Screen -->
-    <div id="setupScreen" class="screen">
+    <div id="setupScreen" class="screen hidden">
         <div class="setup-container">
             <h1>🃏 Bisswiz</h1>
             <p class="tagline">Card Game · 2–4 Players · First Team to 500 Points Wins!</p>

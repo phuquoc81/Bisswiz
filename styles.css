@@ -22,6 +22,64 @@ body {
     display: none !important;
 }
 
+/* ── Login Screen ─────────────────────────────────────────────────────────── */
+
+#loginScreen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse at center, #1a5c30 0%, #0d3b1e 100%);
+}
+
+.login-container {
+    background: rgba(0, 0, 0, 0.55);
+    border: 2px solid rgba(255, 215, 0, 0.4);
+    border-radius: 20px;
+    padding: 50px 60px;
+    max-width: 480px;
+    width: 90%;
+    text-align: center;
+    backdrop-filter: blur(8px);
+}
+
+.login-container h1 {
+    font-size: 3.5em;
+    color: #ffd700;
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    margin-bottom: 8px;
+}
+
+.login-section {
+    margin: 28px 0 20px;
+    text-align: left;
+}
+
+.login-section label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: 600;
+    color: #ffd700;
+    font-size: 0.95em;
+}
+
+.login-section .name-input {
+    width: 100%;
+    font-size: 1.05em;
+    padding: 10px 14px;
+}
+
+.login-error {
+    margin-top: 8px;
+    color: #ff6b6b;
+    font-size: 0.88em;
+}
+
+.btn-play {
+    font-size: 1.2em;
+    padding: 16px 48px;
+    letter-spacing: 0.03em;
+}
+
 /* ── Setup Screen ─────────────────────────────────────────────────────────── */
 
 #setupScreen {

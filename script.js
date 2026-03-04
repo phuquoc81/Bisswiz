@@ -33,6 +33,11 @@ class BisswizGame {
     // ── Setup ────────────────────────────────────────────────────────────────
 
     setupEventListeners() {
+        document.getElementById('playGameBtn').addEventListener('click', () => this.handleLogin());
+        document.getElementById('loginName').addEventListener('keydown', e => {
+            if (e.key === 'Enter') this.handleLogin();
+        });
+
         document.querySelectorAll('.count-btn').forEach(btn => {
             btn.addEventListener('click', e => {
                 document.querySelectorAll('.count-btn').forEach(b => b.classList.remove('active'));
@@ -45,20 +50,43 @@ class BisswizGame {
         document.getElementById('placeBetBtn').addEventListener('click', () => this.placeBet());
         document.getElementById('playAgainBtn').addEventListener('click', () => {
             document.getElementById('winScreen').classList.add('hidden');
-            document.getElementById('setupScreen').classList.remove('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
         });
+    }
+
+    handleLogin() {
+        const nameInput = document.getElementById('loginName');
+        const name = nameInput.value.trim();
+        const errorEl = document.getElementById('loginError');
+
+        if (!name) {
+            errorEl.classList.remove('hidden');
+            nameInput.focus();
+            return;
+        }
+
+        errorEl.classList.add('hidden');
+
+        // Pre-fill Player 1's name from the login field
+        const p1Input = document.getElementById('pName0');
+        if (p1Input) p1Input.value = name;
+
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('setupScreen').classList.remove('hidden');
     }
 
     updatePlayerSetup(count) {
         const container = document.getElementById('playerSetup');
+        const loginName = document.getElementById('loginName')?.value?.trim() || '';
         container.innerHTML = '';
         for (let i = 0; i < count; i++) {
             const isHuman = i === 0;
+            const defaultName = isHuman ? (loginName || 'Player 1') : 'CPU ' + i;
             const div = document.createElement('div');
             div.className = 'player-input-row';
             div.innerHTML = `
                 <label>Player ${i + 1}${isHuman ? ' (You)' : ' (CPU)'}:</label>
-                <input type="text" id="pName${i}" value="${isHuman ? 'Player 1' : 'CPU ' + i}" class="name-input">
+                <input type="text" id="pName${i}" value="${defaultName}" class="name-input">
             `;
             container.appendChild(div);
         }
