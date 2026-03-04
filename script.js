@@ -12,6 +12,45 @@ const RANK_ORDER = { 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 8:8, 9:9, 10:10, J:11, Q:12, 
 
 const TARGET_SCORE = 500;
 
+// ── Constants ─────────────────────────────────────────────────────────────────
+const GAME_URL = typeof window !== 'undefined'
+    ? window.location.href
+    : 'https://phuquoc81.github.io/Bisswiz/';
+
+// ── Phutimizer 81 ─────────────────────────────────────────────────────────────
+// Converts a 1-81 slider level into gameplay modifiers.
+// level=1  → easy (CPU plays weakly, delays are slow)
+// level=41 → standard
+// level=81 → maximum (CPU plays optimally, quicker pace)
+function phutConfig(level) {
+    const t = (level - 1) / 80; // 0..1
+    return {
+        cpuDelay:   Math.round(1400 - t * 1000),  // 1400ms → 400ms
+        resolveDelay: Math.round(1600 - t * 1000),// 1600ms → 600ms
+        trickDelay: Math.round(1400 - t * 1000),
+        cpuSmartness: t,                           // 0=random, 1=optimal
+    };
+}
+
+// ── Phu Si – in-game advisor tips ────────────────────────────────────────────
+const PHUSI_TIPS = [
+    { trigger: 'general', text: 'Lead with your highest card when you want to win the trick outright.' },
+    { trigger: 'general', text: 'In Bisswiz, saving a high card (Ace or 10) until late in the round can be decisive.' },
+    { trigger: 'general', text: 'Watch the pot size — only bet what you can afford to lose each round.' },
+    { trigger: 'general', text: 'If you have no cards of the led suit, any card can be played. Use it to discard low-value cards.' },
+    { trigger: 'general', text: 'Teams of two (4-player mode) benefit from coordination — your partner wins tricks for both of you!' },
+    { trigger: 'general', text: 'The Phutimizer 81 slider sets CPU difficulty. Crank it to 81 for the hardest challenge.' },
+    { trigger: 'winning', text: 'You\'re in the lead! Keep pressure on opponents by winning high-point tricks.' },
+    { trigger: 'losing',  text: 'You\'re behind — try to win tricks with point cards (A, 10, K) to close the gap.' },
+    { trigger: 'lowbet',  text: 'Small bets are safe, but big bets mean big rewards when you win the round!' },
+];
+
+function phusiHint(context) {
+    const pool = PHUSI_TIPS.filter(t => t.trigger === 'general' || t.trigger === context);
+    if (pool.length === 0) return 'Play your best card and enjoy the game!';
+    return pool[Math.floor(Math.random() * pool.length)].text;
+}
+
 class BisswizGame {
     constructor() {
         this.players = [];
@@ -25,9 +64,11 @@ class BisswizGame {
         this.betIndex = 0;
         this.bettingPhase = false;
         this.playingPhase = false;
+        this.phutLevel = 41;      // Phutimizer 81 level (1-81)
 
         this.setupEventListeners();
         this.updatePlayerSetup(2);
+        this.syncPhutimizer();
     }
 
     // ── Setup ────────────────────────────────────────────────────────────────
@@ -52,6 +93,49 @@ class BisswizGame {
             document.getElementById('winScreen').classList.add('hidden');
             document.getElementById('loginScreen').classList.remove('hidden');
         });
+
+        // Phutimizer 81 – setup screen slider
+        const setupSlider = document.getElementById('phutLevel');
+        setupSlider.addEventListener('input', () => {
+            this.phutLevel = parseInt(setupSlider.value);
+            document.getElementById('phutLevelLabel').textContent = this.phutLevel;
+            this.syncPhutimizer();
+        });
+
+        // Phutimizer 81 – in-game slider
+        const gameSlider = document.getElementById('phutLevelInGame');
+        gameSlider.addEventListener('input', () => {
+            this.phutLevel = parseInt(gameSlider.value);
+            document.getElementById('phutLevelGame').textContent = this.phutLevel;
+            this.syncPhutimizer();
+        });
+
+        // Phu Si button
+        document.getElementById('phusiBtn').addEventListener('click', () => this.showPhusiPanel());
+        document.getElementById('phusiClose').addEventListener('click', () => {
+            document.getElementById('phusiPanel').classList.add('hidden');
+        });
+
+        // Social sharing
+        document.getElementById('shareTwitter').addEventListener('click',  () => this.shareGame('twitter'));
+        document.getElementById('shareFacebook').addEventListener('click', () => this.shareGame('facebook'));
+        document.getElementById('shareWhatsapp').addEventListener('click', () => this.shareGame('whatsapp'));
+        document.getElementById('shareCopy').addEventListener('click',     () => this.shareGame('copy'));
+    }
+
+    syncPhutimizer() {
+        const level = this.phutLevel;
+        // Keep both sliders in sync
+        const setupSlider = document.getElementById('phutLevel');
+        const gameSlider  = document.getElementById('phutLevelInGame');
+        if (setupSlider) setupSlider.value = level;
+        if (gameSlider)  gameSlider.value  = level;
+        const labelSetup = document.getElementById('phutLevelLabel');
+        const labelGame  = document.getElementById('phutLevelGame');
+        if (labelSetup) labelSetup.textContent = level;
+        if (labelGame)  labelGame.textContent  = level;
+        const bar = document.getElementById('phutBar');
+        if (bar) bar.style.width = `${Math.round(((level - 1) / 80) * 100)}%`;
     }
 
     handleLogin() {
@@ -118,6 +202,7 @@ class BisswizGame {
 
         document.getElementById('setupScreen').classList.add('hidden');
         document.getElementById('gameScreen').classList.remove('hidden');
+        this.syncPhutimizer();
 
         this.startRound();
     }
@@ -174,6 +259,7 @@ class BisswizGame {
     }
 
     processBetting() {
+        const cfg = phutConfig(this.phutLevel);
         if (this.betIndex >= this.players.length) {
             // All bets placed — start play
             this.bettingPhase = false;
@@ -183,7 +269,7 @@ class BisswizGame {
             this.renderGame();
             this.showMessage(`Round ${this.roundNumber} starts! ${this.players[this.currentPlayer].name} leads.`);
             if (!this.players[this.currentPlayer].isHuman) {
-                setTimeout(() => this.cpuPlayCard(), 900);
+                setTimeout(() => this.cpuPlayCard(), cfg.cpuDelay);
             }
             return;
         }
@@ -198,8 +284,13 @@ class BisswizGame {
             panel.classList.remove('hidden');
             this.showMessage(`💰 ${player.name}, place your bet!`);
         } else {
-            // CPU bets a small random amount (capped at 20% of credits, 0 if broke)
-            const maxBet = Math.floor(player.credits * 0.2);
+            // CPU bets: smartness scales bet aggressiveness with Phutimizer level.
+            // At level 1 (smartness=0): max 5% of credits (conservative/easy).
+            // At level 81 (smartness=1): max 30% of credits (aggressive/hard).
+            // This range keeps easy-mode CPUs cheap to beat and hard-mode CPUs costly.
+            const smartness = phutConfig(this.phutLevel).cpuSmartness;
+            const maxFrac = 0.05 + smartness * 0.25; // 5%–30% of credits
+            const maxBet = Math.floor(player.credits * maxFrac);
             const bet = player.credits > 0 ? Math.floor(Math.random() * maxBet) + 1 : 0;
             this.bets[this.betIndex] = Math.min(bet, player.credits);
             this.betIndex++;
@@ -335,35 +426,56 @@ class BisswizGame {
 
     cpuPlayCard() {
         if (!this.playingPhase) return;
+        const cfg = phutConfig(this.phutLevel);
         const idx = this.currentPlayer;
         const player = this.players[idx];
         const playable = player.hand
             .map((card, i) => ({ card, i }))
             .filter(({ card }) => this.isCardPlayable(card, player.hand));
 
-        // Simple AI: always play the highest available playable card
-        playable.sort((a, b) => RANK_ORDER[b.card.rank] - RANK_ORDER[a.card.rank]);
-        this.playCard(idx, playable[0].i);
+        let chosenIndex;
+        if (cfg.cpuSmartness < 0.33) {
+            // Low level: random card selection
+            chosenIndex = playable[Math.floor(Math.random() * playable.length)].i;
+        } else if (cfg.cpuSmartness < 0.66) {
+            // Mid level: prefer highest card
+            playable.sort((a, b) => RANK_ORDER[b.card.rank] - RANK_ORDER[a.card.rank]);
+            chosenIndex = playable[0].i;
+        } else {
+            // High level (Phutimizer 81 max): strategic – lead high-point cards, otherwise highest
+            const ledSuit = this.currentTrick.length > 0 ? this.currentTrick[0].card.suit : null;
+            const onSuit = ledSuit ? playable.filter(p => p.card.suit === ledSuit) : playable;
+            const pool = onSuit.length > 0 ? onSuit : playable;
+            // Prefer cards with the most points, then highest rank
+            pool.sort((a, b) => {
+                const pDiff = (CARD_POINTS[b.card.rank] || 0) - (CARD_POINTS[a.card.rank] || 0);
+                return pDiff !== 0 ? pDiff : RANK_ORDER[b.card.rank] - RANK_ORDER[a.card.rank];
+            });
+            chosenIndex = pool[0].i;
+        }
+        this.playCard(idx, chosenIndex);
     }
 
     playCard(playerIndex, cardIndex) {
+        const cfg = phutConfig(this.phutLevel);
         const player = this.players[playerIndex];
         const card = player.hand.splice(cardIndex, 1)[0];
         this.currentTrick.push({ playerIndex, card });
         this.renderGame();
 
         if (this.currentTrick.length === this.players.length) {
-            setTimeout(() => this.resolveTrick(), 1000);
+            setTimeout(() => this.resolveTrick(), cfg.resolveDelay);
         } else {
             this.currentPlayer = (this.currentPlayer + 1) % this.players.length;
             this.renderGame();
             if (!this.players[this.currentPlayer].isHuman) {
-                setTimeout(() => this.cpuPlayCard(), 800);
+                setTimeout(() => this.cpuPlayCard(), cfg.cpuDelay);
             }
         }
     }
 
     resolveTrick() {
+        const cfg = phutConfig(this.phutLevel);
         const ledSuit = this.currentTrick[0].card.suit;
         let winnerSlot = 0;
         let highest = RANK_ORDER[this.currentTrick[0].card.rank];
@@ -388,14 +500,14 @@ class BisswizGame {
         this.currentTrick = [];
 
         if (this.players[0].hand.length === 0) {
-            setTimeout(() => this.endRound(), 1200);
+            setTimeout(() => this.endRound(), cfg.trickDelay);
         } else {
             setTimeout(() => {
                 this.renderGame();
                 if (!this.players[this.currentPlayer].isHuman) {
-                    setTimeout(() => this.cpuPlayCard(), 800);
+                    setTimeout(() => this.cpuPlayCard(), cfg.cpuDelay);
                 }
-            }, 1200);
+            }, cfg.trickDelay);
         }
     }
 
@@ -445,6 +557,8 @@ class BisswizGame {
         document.getElementById('gameScreen').classList.add('hidden');
         const winScreen = document.getElementById('winScreen');
 
+        this._lastWinnerTeam = winnerTeamIdx;
+
         document.getElementById('winMessage').innerHTML = `
             <h1>🎉 Game Over!</h1>
             <h2>${this.teamName(winnerTeamIdx)} Wins!</h2>
@@ -463,6 +577,67 @@ class BisswizGame {
         `;
 
         winScreen.classList.remove('hidden');
+    }
+
+    // ── Phu Si helper ─────────────────────────────────────────────────────────
+
+    showPhusiPanel() {
+        const panel = document.getElementById('phusiPanel');
+        const content = document.getElementById('phusiContent');
+
+        let context = 'general';
+        if (this.playingPhase && this.teamScores.length > 0) {
+            const myScore = this.teamScores[0];
+            const maxOther = Math.max(...this.teamScores.slice(1));
+            if (myScore > maxOther + 50) context = 'winning';
+            else if (myScore < maxOther - 50) context = 'losing';
+        }
+
+        // Collect up to 3 unique tips
+        const pool = PHUSI_TIPS.filter(t => t.trigger === 'general' || t.trigger === context);
+        const shuffled = pool.slice().sort(() => Math.random() - 0.5);
+        const tips = shuffled.slice(0, Math.min(3, shuffled.length));
+
+        content.innerHTML = tips.map(t => `<p class="phusi-tip-item">💡 ${t.text}</p>`).join('');
+        panel.classList.remove('hidden');
+    }
+
+    // ── Social sharing ────────────────────────────────────────────────────────
+
+    shareGame(platform) {
+        const winnerName = this._lastWinnerTeam !== undefined
+            ? this.teamName(this._lastWinnerTeam)
+            : 'Play now';
+        const score = this._lastWinnerTeam !== undefined
+            ? `${this.teamScores[this._lastWinnerTeam]} pts`
+            : '';
+        const text = score
+            ? `🃏 I just played Bisswiz – ${winnerName} won with ${score}! Play the Phu card game now!`
+            : `🃏 Play Bisswiz – the Phu card game! Bet, win tricks, race to 500 pts!`;
+        const url = GAME_URL;
+        const encoded = encodeURIComponent(text);
+        const encodedUrl = encodeURIComponent(url);
+
+        const targets = {
+            twitter:  `https://twitter.com/intent/tweet?text=${encoded}&url=${encodedUrl}`,
+            facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encoded}`,
+            whatsapp: `https://wa.me/?text=${encoded}%20${encodedUrl}`,
+        };
+
+        if (platform === 'copy') {
+            const shareText = `${text} ${url}`;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(shareText).then(() => {
+                    this.showMessage('✅ Link copied to clipboard!');
+                }).catch(() => {
+                    this.showMessage('📋 Copy: ' + shareText);
+                });
+            } else {
+                this.showMessage('📋 ' + shareText);
+            }
+        } else if (targets[platform]) {
+            window.open(targets[platform], '_blank', 'noopener,noreferrer,width=600,height=400');
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
